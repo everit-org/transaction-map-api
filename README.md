@@ -1,2 +1,2 @@
 # transaction-map-api
-Transactional Map implementation
+API for transactional Map implementations.
