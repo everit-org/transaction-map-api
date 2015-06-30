@@ -9,10 +9,8 @@ import java.util.Map;
  *          Type of keys.
  * @param <V>
  *          Type of values.
- * @param <T>
- *          type of the objects that identify transactions.
  */
-public interface TransactionalMap<K, V, T> extends Map<K, V> {
+public interface TransactionalMap<K, V> extends Map<K, V> {
 
   /**
    * Commits the currently associated transaction.
@@ -28,7 +26,19 @@ public interface TransactionalMap<K, V, T> extends Map<K, V> {
    * @return The currently associated transaction or <code>null</code> if no transaction is
    *         associated at the moment.
    */
-  T getAssociatedTransaction();
+  Object getAssociatedTransaction();
+
+  /**
+   * In case this method returns <code>true</code>, remove will be replayed for all removed keys,
+   * even for the ones that were re-inserted afterwards. Remove does not have to be called for keys
+   * if the Map was cleared within the transaction. Calling remove-put has normally a performance
+   * drawback but it is necessary in special cases (e.g.: for true-invalidation cache
+   * implementations).
+   *
+   * @return Whether all remove operation that was called within a transaction are replayed during
+   *         commiting the transaction.
+   */
+  boolean isAllRemoveOperationReplayedOnCommit();
 
   /**
    * Resumes a previously suspended transaction.
@@ -38,7 +48,7 @@ public interface TransactionalMap<K, V, T> extends Map<K, V> {
    * @throws IllegalStateException
    *           if the provided transaction is not in suspended state.
    */
-  void resumeTransaction(T transaction);
+  void resumeTransaction(Object transaction);
 
   /**
    * Calls a rollback on the currently associated transaction.
@@ -58,11 +68,11 @@ public interface TransactionalMap<K, V, T> extends Map<K, V> {
    *           (either in suspended or active state) or other transaction is currently associated to
    *           the {@link TransactionalMap} in active state.
    */
-  void startTransaction(T transaction);
+  void startTransaction(Object transaction);
 
   /**
    * Suspends the currently associated transaction.
-   * 
+   *
    * @throws if
    *           no transaction is associated currently to the {@link TransactionalMap}.
    */

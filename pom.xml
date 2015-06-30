@@ -33,7 +33,7 @@
 
   <packaging>bundle</packaging>
   <name>Everit - Transactional Map API</name>
-  <description>API of Transactional Maps.</description>
+  <description>API of Transactional Map implementations.</description>
 
   <properties>
     <projectpath>transaction-map-api</projectpath>
