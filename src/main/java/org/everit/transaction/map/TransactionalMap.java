@@ -18,7 +18,21 @@ package org.everit.transaction.map;
 import java.util.Map;
 
 /**
- * {@link Map} that allows transactional operations.
+ * {@link Map} that allows transactional operations. The {@link Map} should replay all modifications
+ * during commiting the transaction. In case the implementations wraps another Map, the following
+ * rules should be applied on the replay mechanism:
+ *
+ * <ul>
+ * <li>If {@link #clear()} was called within the transaction, the same method should be replayed in
+ * the beginning of the commit</li>
+ * <li>If {@link #clear()} was <strong>not</strong> called within the transaction,
+ * {@link #remove(Object)} functions should be replayed for all keys even if that key was not in the
+ * original {@link Map} when the {@link #remove(Object)} was called or a new entry was inserted with
+ * the same key later. In other words, if a key was removed then reinserted, the TransactionalMap
+ * implementation should replay the remove and the last put method on the wrapped Map. This can be
+ * important for invalidation caches where calling the remove function generates a synchronization
+ * between nodes in a cluster.</li>
+ * </ul>
  *
  * @param <K>
  *          Type of keys.
@@ -44,32 +58,21 @@ public interface TransactionalMap<K, V> extends Map<K, V> {
   Object getAssociatedTransaction();
 
   /**
-   * In case this method returns <code>true</code>, remove will be replayed for all removed keys,
-   * even for the ones that were re-inserted afterwards. Remove does not have to be called for keys
-   * if the Map was cleared within the transaction. Calling remove-put has normally a performance
-   * drawback but it is necessary in special cases (e.g.: for true-invalidation cache
-   * implementations).
-   *
-   * @return Whether all remove operation that was called within a transaction are replayed during
-   *         commiting the transaction.
-   */
-  boolean isAllRemoveOperationReplayedOnCommit();
-
-  /**
    * Resumes a previously suspended transaction.
    *
    * @param transaction
    *          The previously suspended transaction.
    * @throws IllegalStateException
-   *           if the provided transaction is not in suspended state.
+   *           if the provided transaction is not in suspended state or there is another active
+   *           associated transaction.
    */
   void resumeTransaction(Object transaction);
 
   /**
    * Calls a rollback on the currently associated transaction.
    *
-   * @throws if
-   *           no transaction is associated currently to the {@link TransactionalMap}.
+   * @throws IllegalStateException
+   *           if no transaction is associated currently to the {@link TransactionalMap}.
    */
   void rollbackTransaction();
 
@@ -88,8 +91,8 @@ public interface TransactionalMap<K, V> extends Map<K, V> {
   /**
    * Suspends the currently associated transaction.
    *
-   * @throws if
-   *           no transaction is associated currently to the {@link TransactionalMap}.
+   * @throws IllegalStateException
+   *           if no transaction is associated currently to the {@link TransactionalMap}.
    */
   void suspendTransaction();
 
